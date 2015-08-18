@@ -55,7 +55,7 @@ class Command(BaseCommand):
                 if len(row.get(None, [])) == 1:
                     row['CombinedRate'] = row['StateRate']
                 fq = dict(country='US', zip_code=row['ZipCode'], state=row['State'])
-                rate = row['CombinedRate']
+                rate = float(row['CombinedRate']) * 100
                 try:
                     taxrate = TaxRate.objects.get(**fq)
                     taxrate.rate = rate
