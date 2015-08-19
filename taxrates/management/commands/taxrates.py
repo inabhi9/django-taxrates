@@ -32,7 +32,12 @@ class Command(BaseCommand):
         make_option(
             '--period', metavar="DATA_TYPES", default='now',
             help='Updated csv file for Year-Month. Eg: 201509'
+        ),
+        make_option(
+            '--data-dir', metavar="DATA_TYPES", default=None,
+            help='Data directory to store downloaded csv files'
         )
+
     )
 
     def handle(self, *args, **options):
@@ -40,7 +45,8 @@ class Command(BaseCommand):
 
         files = self.download(period=options.get('period'),
                               states=options.get('import', 'all'),
-                              force=options.get('force'))
+                              force=options.get('force'),
+                              data_dir=options.get('data-dir'))
 
         for csvfile in files:
             self.parse_and_save_csv(csvfile)
@@ -64,10 +70,10 @@ class Command(BaseCommand):
                     fq.update({'tax_region_name': row['TaxRegionName'].capitalize(), 'rate': rate})
                     TaxRate.objects.create(**fq)
 
-    def download(self, period='now', states='all', force=False):
+    def download(self, period='now', states='all', force=False, data_dir=None):
         for url in self._get_taxrates_urls(period=period, states=states):
             filename = url.split('/')[-1]
-            save_path = self.data_dir + '/' + filename
+            save_path = (data_dir or self.data_dir) + '/' + filename
 
             if os.path.exists(save_path) and force is False:
                 continue
