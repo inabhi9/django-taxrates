@@ -46,7 +46,7 @@ class Command(BaseCommand):
         files = self.download(period=options.get('period'),
                               states=options.get('import', 'all'),
                               force=options.get('force'),
-                              data_dir=options.get('data-dir'))
+                              data_dir=options.get('data_dir'))
 
         for csvfile in files:
             self.parse_and_save_csv(csvfile)
