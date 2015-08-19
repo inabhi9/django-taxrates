@@ -80,7 +80,7 @@ class Command(BaseCommand):
 
             fn, headers = urllib.urlretrieve(url, save_path)
 
-            if headers.dict.get('ETag') is None:
+            if headers.dict.get('etag') is None:
                 os.remove(save_path)
                 continue
 
