@@ -1,10 +1,17 @@
+import sys
 import csv
-import urllib
 import os
 from optparse import make_option
 
+PYTHON3 = sys.version_info > (2,)
+
+if PYTHON3:
+    from urllib.request import urlretrieve
+else:
+    from urllib import urlretrieve
+
 from django.core.management.base import BaseCommand
-from django.utils import timezone
+from django.utils import timezone, version
 
 from ...models import TaxRate
 
@@ -20,25 +27,46 @@ class Command(BaseCommand):
     app_dir = os.path.normpath(os.path.dirname(os.path.realpath(__file__)) + '/../..')
     data_dir = os.path.join(app_dir, 'data')
 
-    option_list = BaseCommand.option_list + (
-        make_option(
+    # BaseCommand.option_list is deprecated in Django 1.10
+    if version.get_complete_version() <= (1, 10):
+        option_list = BaseCommand.option_list + (
+            make_option(
+                '--force', action='store_true', default=False,
+                help='Import even if files are up-to-date.'
+            ),
+            make_option(
+                '--import', metavar="DATA_TYPES", default='all',
+                help='Selectively import data. Comma separated list of US states 2-alphacode'
+            ),
+            make_option(
+                '--period', metavar="DATA_TYPES", default='now',
+                help='Updated csv file for Year-Month. Eg: 201509'
+            ),
+            make_option(
+                '--data-dir', metavar="DATA_TYPES", default=None,
+                help='Data directory to store downloaded csv files'
+            )
+
+        )
+
+    def add_arguments(self, parser):
+        parser.add_argument(
             '--force', action='store_true', default=False,
             help='Import even if files are up-to-date.'
-        ),
-        make_option(
+        )
+        parser.add_argument(
             '--import', metavar="DATA_TYPES", default='all',
-            help='Selectively import data. Comma separated list of US states 2-alphacode'
-        ),
-        make_option(
+            help=('Selectively import data. '
+                  'Comma separated list of US states 2-alphacode')
+        )
+        parser.add_argument(
             '--period', metavar="DATA_TYPES", default='now',
             help='Updated csv file for Year-Month. Eg: 201509'
-        ),
-        make_option(
+        )
+        parser.add_argument(
             '--data-dir', metavar="DATA_TYPES", default=None,
             help='Data directory to store downloaded csv files'
         )
-
-    )
 
     def handle(self, *args, **options):
         self._mk_data_dir()
@@ -58,8 +86,9 @@ class Command(BaseCommand):
             for row in reader:
                 # In file TAXRATES_ZIP5_LA201508.csv line 114 has comma in tax region name which
                 # causes bad csv format, this the workaround to get combined rate
-                if len(row.get(None, [])) == 1:
+                if len(row.get(None, [])) == 1 or 'CombinedRate' not in row:
                     row['CombinedRate'] = row['StateRate']
+
                 fq = dict(country='US', zip_code=row['ZipCode'], state=row['State'])
                 rate = float(row['CombinedRate']) * 100
                 try:
@@ -78,9 +107,12 @@ class Command(BaseCommand):
             if os.path.exists(save_path) and force is False:
                 continue
 
-            fn, headers = urllib.urlretrieve(url, save_path)
+            fn, headers = urlretrieve(url, save_path)
 
-            if headers.dict.get('etag') is None:
+            if not PYTHON3:
+                headers = headers.dict
+
+            if headers.get('etag') is None:
                 os.remove(save_path)
                 continue
 

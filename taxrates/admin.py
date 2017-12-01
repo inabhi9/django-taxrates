@@ -1,6 +1,8 @@
+from __future__ import absolute_import
+
 from django.contrib import admin
 
-from models import TaxRate
+from .models import TaxRate
 
 
 class TaxRateAdmin(admin.ModelAdmin):
